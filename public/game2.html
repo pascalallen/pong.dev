@@ -1,0 +1,383 @@
+
+<body id="body">
+	<script src="/js/jquery.js"></script>
+	<script>
+"use strict";
+//(function (){
+			//*************************  Key Events  *************************\\
+
+	$(document).keyup(function (event){
+        processKeyUp(event.keyCode);
+    });
+    $(document).keydown(function (event){
+    	processKeyDown(event.keyCode);
+    });
+	function processKeyDown(event){
+		if(event === 39) moveRight();
+		if(event === 37) moveLeft();
+		if(event === 32) jump();
+		if(event === 13) fire();
+		if(event === 48) gameOver();
+	}
+	function processKeyUp(event){
+		console.log(event);
+		if(event === 39) stopRight();
+		if(event === 37) stopLeft();
+	}
+		//*************************  Game Objects  *************************\\
+	
+	var ground = {
+		"type":'0',
+		"x": 0,
+		"y": 300,
+		"xVelocity":0,
+		"yVelocity":0,
+		"height":200,
+		"width":800,
+		"color":'brown',
+		"id":'ground',
+		"top":topBoundary,
+		"bottom": bottomBoundary,
+		"left":leftBoundary,
+		"right":rightBoundary,
+	}
+	var blue = {
+		"type":'2',
+		"x": 400,
+		"y": 260,
+		"xVelocity":0,
+		"yVelocity":0,
+		"height":40,
+		"width":40,
+		"color":'blue',
+		"id":'blue',
+		"top":topBoundary,
+		"bottom": bottomBoundary,
+		"left":leftBoundary,
+		"right":rightBoundary,
+			}
+	var red = {
+		"type":'1',
+		"x": 100,
+		"y": 100,
+		"xVelocity":0,
+		"yVelocity":0,
+		"height":40,
+		"width":40,
+		"color":'red',
+		"id":'red',
+		"top":topBoundary,
+		"bottom": bottomBoundary,
+		"left":leftBoundary,
+		"right":rightBoundary,
+	}
+	var green = {
+		"type": '2',
+		"x": 200,
+		"y": 200,
+		"xVelocity":0,
+		"yVelocity":0,
+		"height":40,
+		"width":40,
+		"color":'green',
+		"id":'green',
+		"top":topBoundary,
+		"bottom": bottomBoundary,
+		"left":leftBoundary,
+		"right":rightBoundary,
+	}	
+		//*************************  Variable Declarations  *************************\\
+
+	var movingRight;
+	var movingLeft;
+	var activeObj = red;
+	var objectsArray = [];
+	var backgroundArray = [];
+	var collider = {};
+	var firedCount = 0;
+
+	var topBlocked = false;
+	var bottomBlocked = false;
+	var rightBlocked = false;
+	var leftBlocked  = false;
+
+	objectsArray.push(ground);
+	objectsArray.push(red);
+	objectsArray.push(blue);
+	objectsArray.push(green);
+
+		//*************************  Functions  *************************\\
+	function constructor (name,type,x,y,xv,yv,height,width,color,id) {
+		name = {};
+		name.type = type;
+		name.x = x;
+		name.y = y;
+		name.xVelocity = xv;
+		name.yVelocity = yv;
+		name.height = height;
+		name.width = width;
+		name.color = color;
+		name.id = id;
+		name.top = topBoundary;
+		name.bottom = bottomBoundary;
+		name.left = leftBoundary;
+		name.right = rightBoundary;
+		$('body').append('<div id="' + name.id + '"></div>');
+		paintObject(name);
+		objectsArray.push(name);	
+		return name;
+	}
+	function fire () {
+		firedCount+=1;
+		var fired = constructor('fired','3',activeObj.x,activeObj.y,10,-10,5,5,'black','fired'+firedCount);
+	}
+	function topBoundary (topEdgeOfThis){
+		if(topEdgeOfThis !== undefined){
+			this.y = topEdgeOfThis;
+		} else {
+			return this.y;
+		}
+	}
+	function bottomBoundary (bottomEdgeOfThis){
+		if (bottomEdgeOfThis !== undefined){
+			this.y = bottomEdgeOfThis - this.height;
+		} else {
+			return this.y + this.height;
+		}
+	}
+	function leftBoundary (leftEdgeOfThis){
+		if (leftEdgeOfThis !== undefined){
+			this.x = leftEdgeOfThis;
+		} else {
+			return this.x;
+		}
+	}
+	function rightBoundary (rightEdgeOfThis){
+		if (rightEdgeOfThis !== undefined){
+			this.x = rightEdgeOfThis - this.width;
+		} else {
+			return this.x + this.width;
+		}
+	}
+	function jump () {
+		activeObj.yVelocity = -20;
+		//woot
+	}
+    function collision (array) { 
+    	array.forEach(function (collider){
+    	bottomBlocked = false;
+    	topBlocked = false;
+    	rightBlocked = false;
+    	leftBlocked  = false;
+    		array.forEach(function (obj){
+    			if (collider.id !== obj.id){
+    				collisionCheck(collider,obj);
+    			}
+    		});
+	    	backgroundArray.forEach(function (obj,i,array) {
+	    		collisionCheck(collider,obj);
+	    	});
+	    	if(bottomBlocked === false) fall (collider);
+	    	if(collider.type === '3') contenuePath(collider);
+    	});
+    }
+    function contenuePath(collider) {
+    	collider.x += collider.xVelocity;
+    	paintObject(collider);
+    }
+    function collisionCheck (collider,obj) {
+		topCollisionCheck (collider, obj);
+		bottomCollisionCheck(collider, obj);
+		leftCollisionCheck(collider, obj);
+		rightCollisionCheck(collider, obj);
+    }
+    function bottomCollisionCheck (collider, obj){
+    	var xLeft = obj.left() + obj.xVelocity - collider.xVelocity;
+    	var xRight = obj.right() + obj.xVelocity - collider.xVelocity;
+    	var cRight = collider.right();
+    	var cLeft = collider.left();
+    	if (xLeft <= cRight && cRight <= xRight || xLeft <= cLeft && cLeft <= xRight){
+	    	if (obj.top() === collider.bottom() && collider.yVelocity === obj.yVelocity){
+	    		handleBottomCollision (collider, obj, 'on');
+	    		bottomBlocked = true;
+	    	}
+	    	else if(obj.top() - collider.yVelocity + obj.yVelocity <= collider.bottom()  && collider.bottom() <= obj.top()){
+	    		handleBottomCollision (collider, obj, 'collideing');
+	    		bottomBlocked = true;
+	    	}
+    	}
+    }
+    function handleBottomCollision (collider, obj, motion) {	
+    	if (motion !== 'on'){
+	    	collider.bottom(obj.top());
+	    	collider.yVelocity = 0;
+	    	paintObject(collider);  				
+    	}
+    }    
+    function topCollisionCheck (collider, obj){	
+    	var xLeft = obj.left() + obj.xVelocity - collider.xVelocity;
+    	var xRight = obj.right() + obj.xVelocity - collider.xVelocity;
+    	var cRight = collider.right();
+    	var cLeft = collider.left();
+    	if (xLeft <= cRight && cRight <= xRight || xLeft <= cLeft && cLeft <= xRight){
+    		if (obj.bottom() <= collider.top() && collider.top() <= obj.bottom() - collider.yVelocity + obj.yVelocity){
+    			handleTopCollision(collider, obj, 'collideing');
+    			topBlocked = true;
+    		}
+    	}
+    }
+    function handleTopCollision (collider, obj, motion) {
+    	collider.yVelocity = 0;
+		collider.top(obj.bottom());
+		paintObject(collider);
+    }
+    function leftCollisionCheck(collider,obj){
+    	var yTop = obj.top() + obj.yVelocity - collider.yVelocity;
+    	var yBottom = obj.bottom() + obj.yVelocity - collider.yVelocity;
+    	var cTop = collider.top();
+    	var cBottom = collider.bottom();
+    	if (yTop <= cTop && cTop <= yBottom || yTop <= cBottom && cBottom <= yBottom){
+    		if(obj.right()<= collider.left() && collider.left() <= obj.right() + obj.xVelocity - collider.xVelocity ){
+    			handleLeftCollision(collider, obj, 'collision');
+    		}
+    	}
+    }
+    function handleLeftCollision (collider, obj, motion) {
+		if (collider.id === activeObj.id){
+			leftBlocked = true;
+			clearInterval(movingLeft);
+		}
+		collider.x = obj.x + obj.width;
+		collider.xVelocity = 0;
+		paintObject(collider);
+    }
+    function rightCollisionCheck (collider,obj){  
+    	var yTop = obj.top() + obj.yVelocity - collider.yVelocity;
+    	var yBottom = obj.bottom() + obj.yVelocity - collider.yVelocity;
+    	var cTop = collider.top();
+    	var cBottom = collider.bottom();
+    	if (yTop <= cTop && cTop <= yBottom || yTop <= cBottom && cBottom <= yBottom){
+    		if(obj.left() + obj.xVelocity - collider.xVelocity <= collider.right() && collider.right() <= obj.left()){
+    				handleRightCollision(collider, obj, 'collision');
+    		}
+    	}	
+    }
+    function handleRightCollision (collider, obj, motion) {
+    	if(collider.id === activeObj.id) {
+    		rightBlocked = true;
+			clearInterval(movingRight);
+		}
+		if (collider.type === '3' && obj.type === '2'){
+			destroyObj(collider);
+			//destroyObj(obj);
+			flash(obj);
+		}
+		collider.x = obj.x - collider.width;
+		collider.xVelocity = 0;
+		paintObject(collider);
+    }
+    function flash(obj) {
+    	var flash = constructor ('flashEffect','0',obj.x,obj.y,0,0,obj.height,obj.width,'yellow','flashEffect');
+    	paintObject(flash);
+    	destroyObj(obj);
+    	setTimeout(function (){
+	    	destroyObj(flash);
+    	},250);
+    }
+    function destroyObj (obj,array) {
+    	var destroyObject = document.getElementById(obj.id);
+    	destroyObject.parentNode.removeChild(destroyObject);
+		for(var i = 0; i < objectsArray.length; i++) {
+		    var objA = objectsArray[i];
+		    if (objA.id === obj.id){
+		    	console.log(objectsArray[i].id);
+		    	objectsArray.splice(i,1);
+		    	break;
+			}
+		}
+    }
+    function fall (obj) {
+    	if(obj.type !== '2' && obj.type !== '0'){
+			obj.yVelocity += .75;
+			obj.y += obj.yVelocity;
+			paintObject(obj);
+			if (obj.y > 400 && obj.id === activeObj.id) gameOver ();
+			if (obj.y > 400 && obj.id !== activeObj.id) destroyObj (obj);
+    	}
+    }    
+    function gameOver () {
+    	document.getElementById('body').style.background = 'red';
+    	clearInterval(collisionId);
+    }
+	function startGameCreateObjects (){
+		objectsArray.forEach(function (element,i,array){
+		    $('#body').append('<div id="' + element.id + '"></div>');
+		    //document.write('<div id="' + element.id + '"></div>');
+		    paintObject(element);
+		});
+		backgroundArray.forEach(function (element,i,array){
+			$('body').append('<div id="' + element.id + '"></div>');
+			//document.write('<div id="' + element.id + '"></div>');
+			paintObject(element);
+		})
+	}
+	function paintObject (obj){
+		var con = document.getElementById(obj.id);
+		con.style.display = 'block';
+		con.style.height = String(obj.height) + 'px';
+		con.style.width = String(obj.width) + 'px';
+		con.style.backgroundColor = obj.color;
+		con.style.position = 'absolute';
+		con.style.top = obj.y + 'px';
+		con.style.left = obj.x + 'px';
+		//$('#body').append('<div>funny man</div>');
+		//obj.con = con;//****************** i dont think i need this ill try to get rid of it when i get get my collioins workinga again
+	}
+	function moveRight (){
+		console.log(rightBlocked);
+		if (rightBlocked === false){
+			if (activeObj.xVelocity === 0){
+				movingRight = setInterval(function (){
+					if(activeObj.xVelocity <8){
+						activeObj.xVelocity+=1;
+					}
+					activeObj.x += activeObj.xVelocity;
+					paintObject(activeObj);
+				},30);
+			}			
+		}
+	}
+	function moveLeft (){
+		if (leftBlocked === false){
+			if (activeObj.xVelocity === 0){
+				movingLeft = setInterval(function (){
+					if(activeObj.xVelocity > (-8)){
+						activeObj.xVelocity-=1;
+					}
+					activeObj.x += activeObj.xVelocity;
+					paintObject(activeObj);
+				},30);
+			}
+		}		
+	}
+	function stopRight (){
+		activeObj.xVelocity = 0;
+		clearInterval(movingRight);
+	}
+	function stopLeft (){
+		activeObj.xVelocity = 0;
+		clearInterval(movingLeft);
+	}
+
+		//*************************  Scripts that run at start of Game *************************\\
+
+startGameCreateObjects ();
+var collisionId = setInterval(function(){
+	collision (objectsArray);
+},20);
+
+
+//})();	
+	</script>
+</body>
+
